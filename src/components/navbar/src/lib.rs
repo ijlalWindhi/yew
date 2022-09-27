@@ -28,10 +28,12 @@ impl Component for Navbar {
                     <div class="uk-navbar-right">
                         <ul class="uk-navbar-nav">
                             <li>
-                                <Link<Route> to={Route::Home}>{ "Home" }</Link<Route>>
+                                // <Link<Route> to={Route::Home}>{ "Home" }</Link<Route>>
+                                <a href="#">{"Home"}</a>
                             </li>
                             <li>
-                                <Link<Route> to={Route::About}>{ "About" }</Link<Route>>
+                                // <Link<Route> to={Route::About}>{ "About" }</Link<Route>>
+                                <a href="#">{"Home"}</a>
                             </li>
                         </ul>
                     </div>
