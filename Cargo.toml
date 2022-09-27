@@ -1,0 +1,23 @@
+[package]
+name = "yew-trunk-2"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+yew = "0.19.3"
+yew-router = "0.16.0"
+
+# navbar = {path = "./src/components/navbar"}
+# home = {path = "./src/pages/home"}
+# about = {path = "./src/pages/about"}
+route = {path = "./src/router/route"}
+
+[workspace]
+member = [
+    "src/components/navbar",
+    "src/pages/home",
+    "src/pages/about",
+    "src/router/route"
+]
