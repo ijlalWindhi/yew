@@ -3,74 +3,61 @@ use serde::Deserialize;
 use yew::{
     format::{Json, Nothing},
     prelude::*,
-    services::fetch::{FetchService, FetchTask, Request, Response},
+    services::{
+        fetch::{FetchService, FetchTask, Request, Response},
+        ConsoleService,
+    },
 };
 use yew_router::components::RouterAnchor;
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ISSPosition {
-    latitude: String,
-    longitude: String,
+pub struct FetchData {
+    email: String,
+    password: String,
+    name: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct ISS {
-    message: String,
-    timestamp: i32,
-    iss_position: ISSPosition,
+pub struct FetchResult {
+    user: Vec<FetchData>,
 }
 
 #[derive(Debug)]
 pub enum Msg {
-    GetLocation,
-    ReceiveResponse(Result<ISS, anyhow::Error>),
+    GetData,
+    ReceiveResponse(Result<FetchResult, anyhow::Error>),
 }
 
 #[derive(Debug)]
 pub struct Data {
     fetch_task: Option<FetchTask>,
-    iss: Option<ISS>,
+    result: Option<FetchResult>,
     link: ComponentLink<Self>,
     error: Option<String>,
 }
 
 impl Data {
-    fn view_iss_location(&self) -> Html {
-        type Anchor = RouterAnchor<AppRoute>;
-        match self.iss {
-            Some(ref space_station) => {
-                html! {
-                    <>
-                        <p>{ "The ISS is at:" }</p>
-                        <p>{ format!("Message: {}", space_station.message) }</p>
-                        <p>{ format!("Timestamp: {}", space_station.timestamp) }</p>
-                        <p>{ format!("Latitude: {}", space_station.iss_position.latitude) }</p>
-                        <p>{ format!("Longitude: {}", space_station.iss_position.longitude) }</p>
-                        <Anchor
-                            route=AppRoute::Register
-                        >
-                            {"Register"}
-                        </Anchor>
-                    </>
-                }
-            }
-            None => {
-                html! {
-                    <>
-                        <button onclick=self.link.callback(|_| Msg::GetLocation)>
-                            { "Where is the ISS?" }
-                        </button>
-                        <Anchor
-                            route=AppRoute::Register
-                        >
-                            {"Register"}
-                        </Anchor>
-                    </>
-                }
-            }
-        }
+    fn view(&self) -> Html {
+        self.result
+            .iter()
+            .map(|data| {
+                data.user
+                    .iter()
+                    .map(|data| {
+                        html! {
+                            <div>
+                                <p>{data.email.clone()}</p>
+                                <p>{data.password.clone()}</p>
+                                <p>{data.name.clone()}</p>
+                            </div>
+                        }
+                    })
+                    .collect::<Html>()
+            })
+            .collect::<Html>()
     }
 }
+
 impl Component for Data {
     type Message = Msg;
     type Properties = ();
@@ -78,7 +65,7 @@ impl Component for Data {
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
             fetch_task: None,
-            iss: None,
+            result: None,
             link,
             error: None,
         }
@@ -90,24 +77,25 @@ impl Component for Data {
         use Msg::*;
 
         match msg {
-            GetLocation => {
-                let request = Request::get("http://api.open-notify.org/iss-now.json")
+            GetData => {
+                let request = Request::get("http://localhost:8080/user")
                     .body(Nothing)
                     .expect("Could not build request.");
-                let callback =
-                    self.link
-                        .callback(|response: Response<Json<Result<ISS, anyhow::Error>>>| {
-                            let Json(data) = response.into_body();
-                            Msg::ReceiveResponse(data)
-                        });
+                let callback = self.link.callback(
+                    |response: Response<Json<Result<FetchResult, anyhow::Error>>>| {
+                        let Json(data) = response.into_body();
+                        Msg::ReceiveResponse(data)
+                    },
+                );
                 let task = FetchService::fetch(request, callback).expect("failed to start request");
                 self.fetch_task = Some(task);
                 true
             }
             ReceiveResponse(response) => {
                 match response {
-                    Ok(location) => {
-                        self.iss = Some(location);
+                    Ok(data) => {
+                        ConsoleService::log(&format!("{:?}", data.user));
+                        self.result = Some(data);
                     }
                     Err(error) => self.error = Some(error.to_string()),
                 }
@@ -116,11 +104,19 @@ impl Component for Data {
             }
         }
     }
+    fn rendered(&mut self, _first_render: bool) {
+        if _first_render {
+            self.link.send_message(Msg::GetData);
+        }
+    }
     fn view(&self) -> Html {
         html! {
-            <>
-                { self.view_iss_location() }
-            </>
+            <div>
+                <RouterAnchor<AppRoute> route=AppRoute::Register>
+                    { "Register" }
+                </RouterAnchor<AppRoute>>
+                { self.view() }
+            </div>
         }
     }
 }
